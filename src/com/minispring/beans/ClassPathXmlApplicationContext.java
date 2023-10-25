@@ -14,62 +14,29 @@ import java.util.Map;
 /**
  * 作用：解析某个路径下的 XML 来构建应用上下文
  * 按照一定的规则将 XML 文件内容解析出来，获取 Bean 的配置信息
+ *
+ * 1. 解析 XML 文件中的内容
+ * 2. 加载解析的内容，构建 BeanDefinition
+ * 3. 读取 BeanDefinition 的配置信息，实例化 Bean，然后把它注入到 BeanFactory 容器中
  */
-public class ClassPathXmlApplicationContext {
-    private List<BeanDefinition> beanDefinitions = new ArrayList<>();
-
-    private Map<String, Object> singletons = new HashMap<>();
-
-    // 构造器获取外部配置，解析出 Bean 的定义，形成内存映像
+public class ClassPathXmlApplicationContext implements BeanFactory {
+    BeanFactory beanFactory;
+    // context 负责整合容器的启动过程，读取外部配置，解析 Bean 定义，创建 BeanFactory
     public ClassPathXmlApplicationContext(String fileName) {
-        this.readXml(fileName);
-        this.instanceBeans();
+        Resource resource = new ClassPathXmlResource(fileName);
+        BeanFactory beanFactory = new SimpleBeanFactory();
+        XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(beanFactory);
+        reader.loadBeanDefinitions(resource);
+        this.beanFactory = beanFactory;
+    }
+    // context 再对外提供一个 getBean 方法，底下就是调用的 BeanFactory 对应的方法
+    @Override
+    public Object getBean(String beanName) throws BeansException {
+        return this.beanFactory.getBean(beanName);
     }
 
-    // 传入 XML 文件的全路径名，获取 XML 内的信息
-
-    /**
-     * 解析 Bean 的核心方法：传入 XML 文件的全路径名，获取 XML 内的信息
-     * 配置在 XML 内的 Bean 信息都是文本信息，需要解析之后变成内存结构才能注入到容器中。
-     *
-     * @param fileName
-     */
-    private void readXml(String fileName) {
-        SAXReader saxReader = new SAXReader();
-        try {
-            URL xmlPath = this.getClass().getClassLoader().getResource(fileName);
-            Document document = saxReader.read(xmlPath);
-            Element rootElement = document.getRootElement();
-            // 对配置文件中的每一个 <bean> 进行处理
-            for (Element element : (List<Element>) rootElement.elements()) {
-                // 获取 Bean 的基本信息
-                String beanId = element.attributeValue("id");
-                String beanClassName = element.attributeValue("class");
-                BeanDefinition beanDefinition = new BeanDefinition(beanId, beanClassName);
-                // 将 Bean 的定义存放到 beanDefinitions
-                beanDefinitions.add(beanDefinition);
-            }
-        } catch (DocumentException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * 利用反射创建 Bean 实例，并存储在 singletons 中
-     */
-    private void instanceBeans() {
-        for (BeanDefinition beanDefinition : beanDefinitions) {
-            try {
-                singletons.put(beanDefinition.getId(),
-                        Class.forName(beanDefinition.getClassName()).newInstance());
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
-    // 这是对外的一个方法，让外部程序从容器中获取 Bean 实例，会逐步演化成核心方法
-    public Object getBean(String beanName) {
-        return singletons.get(beanName);
+    @Override
+    public void registerBeanDefinition(BeanDefinition beanDefinition) {
+        this.beanFactory.registerBeanDefinition(beanDefinition);
     }
 }
