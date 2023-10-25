@@ -1,4 +1,4 @@
-package com.test.service;
+package com.minispring.test.service;
 
 public class AServiceImpl implements AService {
 
