@@ -60,7 +60,8 @@ public class ClassPathXmlApplicationContext {
     private void instanceBeans() {
         for (BeanDefinition beanDefinition : beanDefinitions) {
             try {
-                singletons.put(beanDefinition.getId(), Class.forName(beanDefinition.getClassName()).newInstance());
+                singletons.put(beanDefinition.getId(),
+                        Class.forName(beanDefinition.getClassName()).newInstance());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
